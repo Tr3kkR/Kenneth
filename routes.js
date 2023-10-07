@@ -1,4 +1,4 @@
-//define middleware chain - > auth then pass to the appropriate route?
+var crypto = require('crypto');
 
 async function initRoutes(app, pool) {
 
@@ -14,7 +14,13 @@ async function initRoutes(app, pool) {
       const regex = new RegExp("Basic\\s+(.*)$");
       
       if (auth_header.match(regex)) {
+        
         res.locals.b64_auth_value = auth_header.match(regex)[1];
+        const b_64_decoded = (Buffer.from(res.locals.b64_auth_value, 'base64').toString('ascii')).split(':') //TO FIX: need more accurate splitting
+        const [user, password_hash] = b_64_decoded //TO FIX: hashed password
+        res.locals.user = user
+        res.locals.password_hash = password_hash
+
         console.log(res.locals.b64_auth_value);
         console.log("http basic auth");
       } 
@@ -22,24 +28,22 @@ async function initRoutes(app, pool) {
         return res.status(403).json({ error: "Invalid header" });
       }
 
-      res.locals.check = (await pool.query("SELECT * FROM role")).rows;
+      res.locals.check = (await pool.query("SELECT * FROM role")).rows; //TO FIX: need to search for actual user instead
       let match = false;
 
-      for ({ id, name } of res.locals.check) {
-        const userPassString = id + ":" + name;
-        const b_64 = Buffer.from(userPassString).toString("base64");
-        if (res.locals.b64_auth_value == b_64) {
-          match = true;
-          console.log("Valid credentials: user authenticated");
-          next();
+      for ({ id, name, hash } of res.locals.check) {
+        if (name == res.locals.user) {
+          if (res.locals.password_hash == hash) {
+            match = true
+            console.log("Valid credentials: user authenticated");
+            next(); //user authenticated
+          }
+          }
         }
-      }
       if (!match) {
         return res.status(403).json({ error: "Invalid Credentials" });
       }
 }
-
-  //chuck all the app.gets in here
 
   // Serve a simple form on the root route
   app.get("/", (req, res) => {
