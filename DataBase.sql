@@ -14,6 +14,8 @@ CREATE TABLE Environment (
 CREATE TABLE Role (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE
+    hash VARCHAR(255) NOT NULL
+    salt VARCHAR(255) NOT NULL
 );
 
 -- AssetType Table (Container, Server, Hypervisor, JAR file, Running Application, Static Code file)
